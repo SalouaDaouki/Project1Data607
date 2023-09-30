@@ -1,0 +1,123 @@
+---
+title: "Project1Data607"
+author: "Saloua Daouki"
+date: "2023-09-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading Packages and reading the .txt file
+
+In this project, you\'re given a text file with chess tournament results where the information has some structure. Your
+job is to create an R Markdown file that generates a .CSV file (that could for example be imported into a SQL database)
+with the following information for all of the players:
+Player\'s Name, Player\'s State, Total Number of Points, Player\'s Pre-Rating, and Average Pre Chess Rating of Opponents
+For the first player, the information would be:		
+
+Gary Hua, ON, 6.0, 1794, 1605
+
+```{r }
+library(stringr)
+library(readr)
+
+url="https://raw.githubusercontent.com/SalouaDaouki/Project1Data607/master/tournamentinfo.txt"
+df = readLines(url)
+```
+
+## Viewing the data
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+head(df)
+```
+
+## Modifying the data format:
+
+```{r}
+x0 = 0
+x1 = unname(str_locate_all(pattern = '\\|', df[5])[[1]][1,1])
+x2 = unname(str_locate_all(pattern = '\\|', df[5])[[1]][2,1])
+x3 = unname(str_locate_all(pattern = '\\|', df[5])[[1]][3,1])
+x4 = max(nchar(df))
+
+
+seq1 = seq(5, 196, 3)
+seq2 = seq(6, 196, 3)
+group1 = df[seq1]
+group2 = df[seq2]
+```
+
+```{r}
+#group player names
+name = substr(group1, x1 + 1, x2 - 2)
+PlayerName = str_trim(name)
+
+#group player state
+state = substr(group2, x0, x1 - 1)
+State = str_trim(state)
+
+#group total points
+totalpts = substr(group1, x2 + 1, x3 - 1)
+
+#group pre-ratings
+pre = substr(group2, x1 + 1, x2 - 1)
+pre = str_extract(pre, ': *\\d{2,}')
+
+#add each feature into dataframe
+chess_df = data.frame(PlayerName, State)
+chess_df$TotalPts = sprintf("%.1f", as.numeric(totalpts))
+chess_df$PreRating = as.integer(str_extract(pre, '\\d{2,}'))
+
+```
+
+## Calculating the Average Pre Chess Rating of Opponents: 
+
+1605 was calculated by using the pre-tournament opponents\' ratings of 1436, 1563, 1600, 1610, 1649, 1663, 1716, and
+dividing by the total number of games played.
+
+```{r}
+opp = substr(group1, x3 + 1, x4)
+opp = str_extract_all(opp, '\\b\\d{1,}')
+opp = as.matrix(opp)
+
+avgoppprerate = function(y, z){
+  x = y[z]
+  
+  for (a in x) {
+    rate = 0
+    c = 0
+    for (b in a) {
+      c = c + 1
+      rate = rate + chess_df$PreRating[as.numeric(b)]
+    }
+    rate = round(rate/c)
+  }
+  return(rate)
+}
+
+chess_df$AvgOppPreRating = apply(opp, 1, avgoppprerate)
+```
+
+## Viewing the new dataframe
+
+```{r}
+View(chess_df)
+```
+
+## Writing the new data frame as .csv file:
+
+```{r}
+write_csv (chess_df, "tournamentinfo.csv")
+```
+
+```{r}
+csv_df = read_csv("https://raw.githubusercontent.com/SalouaDaouki/Project1Data607/master/tournamentinfo.csv")
+```
+
+```{r}
+csv_df
+```
